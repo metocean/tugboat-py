@@ -216,75 +216,32 @@ class Usage(object):
     project.build(service_names=servicenames, no_cache=False)
 
   def rebuild(self, project, projectname, servicenames):
-    client = docker_client()
-    config = self._get_config(projectname)
-    project = Project.from_dicts(
-      projectname,
-      config,
-      client)
     project.build(service_names=servicenames, no_cache=True)
 
   def kill(self, project, projectname, servicenames):
-    client = docker_client()
-    config = self._get_config(projectname)
-    project = Project.from_dicts(
-      projectname,
-      config,
-      client)
     project.kill(service_names=servicenames, signal='SIGTERM')
-
     self.ps(project, projectname, servicenames)
 
   def logs(self, project, projectname, servicenames):
-    client = docker_client()
-    config = self._get_config(projectname)
-    project = Project.from_dicts(
-      projectname,
-      config,
-      client)
     containers = project.containers(service_names=servicenames, stopped=True)
     print('Attaching to', ', '.join(c.name for c in containers))
     LogPrinter(containers, attach_params={'logs': True}).run()
 
   def pull(self, project, projectname, servicenames):
-    client = docker_client()
-    config = self._get_config(projectname)
-    project = Project.from_dicts(
-      projectname,
-      config,
-      client)
     project.pull(service_names=servicenames)
 
   def rm(self, project, projectname, servicenames):
-    client = docker_client()
-    config = self._get_config(projectname)
-    project = Project.from_dicts(
-      projectname,
-      config,
-      client)
     project.remove_stopped(service_names=servicenames)
 
     self.ps(project, projectname, servicenames)
 
   def down(self, project, projectname, servicenames):
-    client = docker_client()
-    config = self._get_config(projectname)
-    project = Project.from_dicts(
-      projectname,
-      config,
-      client)
     project.kill(service_names=servicenames, signal='SIGTERM')
     project.stop(service_names=servicenames)
 
     self.ps(project, projectname, servicenames)
 
   def cull(self, project, projectname, servicenames):
-    client = docker_client()
-    config = self._get_config(projectname)
-    project = Project.from_dicts(
-      projectname,
-      config,
-      client)
     project.kill(service_names=servicenames, signal='SIGTERM')
     project.stop(service_names=servicenames)
     project.remove_stopped(service_names=servicenames)
@@ -292,23 +249,11 @@ class Usage(object):
     self.ps(project, projectname, servicenames)
 
   def recreate(self, project, projectname, servicenames):
-    client = docker_client()
-    config = self._get_config(projectname)
-    project = Project.from_dicts(
-      projectname,
-      config,
-      client)
     project.restart(service_names=servicenames)
 
     self.ps(project, projectname, servicenames)
 
   def up(self, project, projectname, servicenames):
-    client = docker_client()
-    config = self._get_config(projectname)
-    project = Project.from_dicts(
-      projectname,
-      config,
-      client)
     project.up(
       service_names=servicenames,
       smart_recreate=True)
@@ -316,13 +261,6 @@ class Usage(object):
     self.ps(project, projectname, servicenames)
 
   def diff(self, project, projectname, servicenames):
-    client = docker_client()
-    config = self._get_config(projectname)
-    project = Project.from_dicts(
-      projectname,
-      config,
-      client)
-
     services = project.get_services(servicenames, include_deps=True)
     plans = project._get_convergence_plans(services, smart_recreate=True)
 
@@ -341,12 +279,6 @@ class Usage(object):
     print()
 
   # def _exec(self,projectname, servicename, commands):
-  #   client = docker_client()
-  #   config = self._get_config(projectname)
-  #   project = Project.from_dicts(
-  #     projectname,
-  #     config,
-  #     client)
   #   containers = project.containers(service_names=[servicename])
   #   container = containers[0]
   #   command = commands
