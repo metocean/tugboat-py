@@ -45,7 +45,7 @@ def main():
     sys.exit(1)
 # tug2 exec PROJECT SERVICE [COMMANDS ...]
 class Usage(object):
-  """Define and run multi-container applications with Docker.
+  """Describe your infrastructure with yaml files.
 
   Usage:
     tug2 ps
