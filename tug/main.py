@@ -53,12 +53,12 @@ class Usage(object):
 
   Common Commands:
 
-    ps             List all running and available groups
+    ps             List all running and available projects
     up             Update and run services
     diff           Describe the changes needed to update
     cull           Stop and delete services
-    logs           Display group logs
-    exec           Run a command inside a service (not implemented yet)
+    logs           Display container logs
+    exec           Run a command inside a container (not implemented yet)
 
   Management Commands:
 
@@ -100,8 +100,6 @@ class Usage(object):
       print('{command} command not found'.format(command=command))
       sys.exit(1)
 
-    # for ps project is optional
-    # for everything else servicenames are also optional
     projectname = options['PROJECT']
     servicenames = options['SERVICES']
 
