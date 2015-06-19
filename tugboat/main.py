@@ -55,7 +55,7 @@ class Usage(object):
 
     ps             List all running and available groups
     up             Update and run services
-    diff           Describe the changes needed to update (not implemented yet)
+    diff           Describe the changes needed to update
     cull           Stop and delete services
     logs           Display group logs
     exec           Run a command inside a service (not implemented yet)
