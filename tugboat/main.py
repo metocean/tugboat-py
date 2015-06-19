@@ -322,6 +322,31 @@ class Usage(object):
 
     self.ps(projectname, servicenames)
 
+  def diff(self, projectname, servicenames):
+    client = docker_client()
+    config = self._get_config(projectname)
+    project = Project.from_dicts(
+      projectname,
+      config,
+      client)
+
+    services = project.get_services(servicenames, include_deps=True)
+    plans = project._get_convergence_plans(services, smart_recreate=True)
+
+    print()
+    print('  {name} convergence plan:'.format(name=projectname))
+    print()
+    for service in plans:
+      plan = plans[service]
+      containers = []
+      for container in plan.containers:
+        containers.append(container.name)
+      print('  {name: <24}{action: <12}{containers}'.format(
+        name=service,
+        action=plan.action,
+        containers=', '.join(containers)))
+    print()
+
   # def _exec(self,projectname, servicename, commands):
   #   client = docker_client()
   #   config = self._get_config(projectname)
