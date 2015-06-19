@@ -123,12 +123,15 @@ class Usage(object):
     return name
 
   def _get_config(self, name):
-    filename = path.abspath('{name}.yml'.format(
-      name=name))
+    filename = path.abspath('{name}.yml'.format(name=name))
     return config.load(filename)
 
   def _get_projectnames_in_dir(self):
-    return [self._clean_project_name(file) for file in os.listdir(os.getcwd()) if file.endswith('.yaml') or file.endswith('.yml')]
+    return [
+      self._clean_project_name(file)
+      for file in os.listdir(os.getcwd())
+        if file.endswith('.yaml') or file.endswith('.yml')
+    ]
 
   def _ps(self):
     client = docker_client()
@@ -261,6 +264,10 @@ class Usage(object):
     self.ps(project, projectname, servicenames)
 
   def diff(self, project, projectname, servicenames):
+    containers = project.containers(stopped=True) + project.containers(one_off=True)
+    unknown = {}
+    for container in containers:
+      unknown[container.id] = container
     services = project.get_services(servicenames, include_deps=True)
     plans = project._get_convergence_plans(services, smart_recreate=True)
 
@@ -269,13 +276,19 @@ class Usage(object):
     print()
     for service in plans:
       plan = plans[service]
-      containers = []
+      service_containers = []
       for container in plan.containers:
-        containers.append(container.name)
+        del containers[container.id]
+        service_containers.append(container.name)
       print('  {name: <24}{action: <12}{containers}'.format(
         name=service,
         action=plan.action,
-        containers=', '.join(containers)))
+        containers=', '.join(service_containers)))
+    # for id in unknown:
+    #   container = unknown[id]
+    #   print('  {name: <24}{action: <12}'.format(
+    #     name=container.name,
+    #     action='delete'))
     print()
 
   # def _exec(self,projectname, servicename, commands):
