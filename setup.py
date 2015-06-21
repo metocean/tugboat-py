@@ -30,6 +30,7 @@ setup(
   description='Describe your infrastructure with yaml files',
   url='https://github.com/metocean/tugboat-py',
   author='MetOcean Solutions Ltd.',
+  author_email='t.coats@metocean.co.nz',
   license='Apache License 2.0',
   packages=find_packages(exclude=['tests.*', 'tests']),
   include_package_data=True,

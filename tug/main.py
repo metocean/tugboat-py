@@ -9,6 +9,7 @@ import sys
 import os
 import subprocess
 from os import path
+from requests.exceptions import ReadTimeout
 
 from docopt import docopt, DocoptExit
 
@@ -266,9 +267,33 @@ class Usage(object):
         self.ps(project, projectname, servicenames)
 
     def up(self, project, projectname, servicenames):
+        containers = project.containers(stopped=True) + project.containers(one_off=True)
+        unknown = {}
+        for container in containers:
+            unknown[container.id] = container
+        services = project.get_services(servicenames, include_deps=True)
+        plans = project._get_convergence_plans(services, smart_recreate=True)
+        for service in plans:
+            plan = plans[service]
+            for container in plan.containers:
+                del unknown[container.id]
         project.up(
             service_names=servicenames,
             smart_recreate=True)
+        for id in unknown:
+            container = unknown[id]
+            if container.is_running:
+                container.kill(signal='SIGTERM')
+                try:
+                    container.client.wait(container.id, timeout=10)
+                except ReadTimeout as e:
+                    pass
+                container.stop()
+                try:
+                    container.client.wait(container.id, timeout=10)
+                except ReadTimeout as e:
+                    pass
+            container.remove()
 
         self.ps(project, projectname, servicenames)
 
@@ -287,20 +312,21 @@ class Usage(object):
             plan = plans[service]
             service_containers = []
             for container in plan.containers:
-                del containers[container.id]
+                del unknown[container.id]
                 service_containers.append(container.name)
             print('  {name: <24}{action: <12}{containers}'.format(
                 name=service,
                 action=plan.action,
                 containers=', '.join(service_containers)))
         # TODO: Add this in when up starts deleting unknown containers.
-        # for id in unknown:
-        #   container = unknown[id]
-        #   print('  {name: <24}{action: <12}'.format(
-        #     name=container.name,
-        #     action='delete'))
+        for id in unknown:
+            container = unknown[id]
+            print('  {name: <24}{action: <12}'.format(
+                name=container.name,
+                action='delete'))
         print()
 
+    # TODO: look in the yaml file?
     def _exec(self, projectname, servicename, commands):
         containername = '{projectname}_{servicename}_1'.format(
             projectname=projectname,
