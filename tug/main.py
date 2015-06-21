@@ -7,6 +7,7 @@ import re
 import signal
 import sys
 import os
+import subprocess
 from os import path
 
 from docopt import docopt, DocoptExit
@@ -14,9 +15,6 @@ from docopt import docopt, DocoptExit
 from compose import config
 from compose.project import Project
 from compose.cli.log_printer import LogPrinter
-
-from .client import docker_client
-from .__init__ import __version__
 
 from docker.errors import APIError
 from compose.project import NoSuchService, ConfigurationError
@@ -26,7 +24,12 @@ from compose.legacy import LegacyContainersError
 import docker
 import dockerpty
 
+from .client import docker_client
+from .__init__ import __version__
+
+
 def main():
+
     try:
         Usage()
     except KeyboardInterrupt:
@@ -43,12 +46,16 @@ def main():
             service=e.service.name,
             reason=e.reason))
         sys.exit(1)
-# tug2 exec PROJECT SERVICE [COMMANDS ...]
+
+
 class Usage(object):
+
+
     """Describe your infrastructure with yaml files.
 
     Usage:
         tug2 ps
+        tug2 exec PROJECT SERVICE [COMMANDS ...]
         tug2 COMMAND PROJECT [SERVICES ...]
 
     Common Commands:
@@ -90,11 +97,11 @@ class Usage(object):
             self._ps()
             return
 
-        # if 'exec' in options and options['exec']:
-        #   self._exec(options['PROJECT'], options['SERVICE'], options['COMMANDS'])
-        #   return
+        if 'exec' in options and options['exec']:
+          self._exec(options['PROJECT'], options['SERVICE'], options['COMMANDS'])
+          return
 
-        # command references a function on this class
+        # 'command' references a function on this class
         command = options['COMMAND']
         if not hasattr(self, command):
             print('{command} command not found'.format(command=command))
@@ -114,8 +121,7 @@ class Usage(object):
         handle(project, projectname, servicenames)
 
     def _clean_project_name(self, name):
-        # remove .yml and .yaml to get back to project name
-        # this is sugar
+        # Remove .yml and .yaml to get back to project name.
         if name.endswith('.yml'):
             name = name[:-4]
         if name.endswith('.yaml'):
@@ -139,7 +145,8 @@ class Usage(object):
         containers = client.containers(all=True)
         unknown = {}
         for container in containers:
-            unknown[container['Id']] = client.inspect_container(container['Id'])
+            unknown[container['Id']] = client.inspect_container(
+                container['Id'])
         if len(projectnames) != 0:
             print()
         for projectname in projectnames:
@@ -226,7 +233,9 @@ class Usage(object):
         self.ps(project, projectname, servicenames)
 
     def logs(self, project, projectname, servicenames):
-        containers = project.containers(service_names=servicenames, stopped=True)
+        containers = project.containers(
+            service_names=servicenames,
+            stopped=True)
         print('Attaching to', ', '.join(c.name for c in containers))
         LogPrinter(containers, attach_params={'logs': True}).run()
 
@@ -284,6 +293,7 @@ class Usage(object):
                 name=service,
                 action=plan.action,
                 containers=', '.join(service_containers)))
+        # TODO: Add this in when up starts deleting unknown containers.
         # for id in unknown:
         #   container = unknown[id]
         #   print('  {name: <24}{action: <12}'.format(
@@ -291,13 +301,17 @@ class Usage(object):
         #     action='delete'))
         print()
 
-    # def _exec(self,projectname, servicename, commands):
-    #   containers = project.containers(service_names=[servicename])
-    #   container = containers[0]
-    #   command = commands
-    #   if command == None or not command:
-    #     command = ['/bin/bash']
-    #   execute = project.client.exec_create(container.id, command, tty=True)
-    #   result = project.client.exec_start(execute.Id, tty=True, stream=True)
-    #   print(execute)
-    #   sys.exit(exit_code)
+    def _exec(self, projectname, servicename, commands):
+        containername = '{projectname}_{servicename}_1'.format(
+            projectname=projectname,
+            servicename=servicename)
+        command = commands
+        if command is None or not command:
+            command = ['/bin/bash']
+        print()
+        print('  docker exec -it {containername} {command}'.format(
+            containername=containername,
+            command=' '.join(command)))
+        print()
+        command = ['docker', 'exec', '-it', containername] + command
+        sys.exit(subprocess.call(command))

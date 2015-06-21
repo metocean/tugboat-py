@@ -1,7 +1,8 @@
-from docker import Client
-from docker import tls
 import ssl
 import os
+
+from docker import Client
+from docker import tls
 
 # hack for not testing SSL connection
 from requests.packages import urllib3
@@ -43,4 +44,8 @@ def docker_client():
         )
 
     timeout = int(os.environ.get('DOCKER_CLIENT_TIMEOUT', 60))
-    return Client(base_url=base_url, tls=tls_config, version='1.19', timeout=timeout)
+    return Client(
+        base_url=base_url,
+        tls=tls_config,
+        version='1.19',
+        timeout=timeout)
