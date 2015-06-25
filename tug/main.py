@@ -280,20 +280,22 @@ class Usage(object):
         project.up(
             service_names=servicenames,
             smart_recreate=True)
-        for id in unknown:
-            container = unknown[id]
-            if container.is_running:
-                container.kill(signal='SIGTERM')
-                try:
-                    container.client.wait(container.id, timeout=10)
-                except ReadTimeout as e:
-                    pass
-                container.stop()
-                try:
-                    container.client.wait(container.id, timeout=10)
-                except ReadTimeout as e:
-                    pass
-            container.remove()
+
+        if len(servicenames) == 0:
+            for id in unknown:
+                container = unknown[id]
+                if container.is_running:
+                    container.kill(signal='SIGTERM')
+                    try:
+                        container.client.wait(container.id, timeout=10)
+                    except ReadTimeout as e:
+                        pass
+                    container.stop()
+                    try:
+                        container.client.wait(container.id, timeout=10)
+                    except ReadTimeout as e:
+                        pass
+                container.remove()
 
         self.ps(project, projectname, servicenames)
 
