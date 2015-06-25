@@ -2,6 +2,9 @@
 
 Tugboat is [docker compose](https://docs.docker.com/compose/) under the hood with a new command line interface including native support for multiple .yml files and a friendlier syntax.
 
+## Installation
+`pip install tug`
+
 ## Usage
 
 ```
