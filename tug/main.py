@@ -49,6 +49,8 @@ def main():
         sys.exit(1)
 
 
+yaml_re = re.compile('\.yaml$|\.yml$')
+
 class Usage(object):
 
 
@@ -83,6 +85,7 @@ class Usage(object):
         -v --version   Display the version number
 
     """
+
     def __init__(self):
         docstring = getdoc(Usage)
         options = None
@@ -108,7 +111,7 @@ class Usage(object):
             print('{command} command not found'.format(command=command))
             sys.exit(1)
 
-        projectname = options['PROJECT']
+        projectname = self._clean_project_name(options['PROJECT'])
         servicenames = options['SERVICES']
 
         client = docker_client()
@@ -121,28 +124,32 @@ class Usage(object):
         handle = getattr(self, command)
         handle(project, projectname, servicenames)
 
-    def _clean_project_name(self, name):
-        # Remove .yml and .yaml to get back to project name.
-        if name.endswith('.yml'):
-            name = name[:-4]
-        if name.endswith('.yaml'):
-            name = name[:-5]
-        return name
+    def _clean_project_name(self, name):       
+        return yaml_re.sub('', name)
+
+    def _evaluate_env_vars(self):
+        pass
 
     def _get_config(self, name):
-        filename = path.abspath('{name}.yml'.format(name=name))
-        return config.load(filename)
+        for filename in self._get_projects_in_dir(True):
+            if re.search('%s(.yaml|.yml)$' % name, filename): 
+                return config.load(filename)
+        raise ConfigurationError("Project filename '%s' not found in the current directory" % name)               
 
-    def _get_projectnames_in_dir(self):
-        return [
-            self._clean_project_name(file)
-            for file in os.listdir(os.getcwd())
-                if file.endswith('.yaml') or file.endswith('.yml')
-        ]
+    def _get_projects_in_dir(self, fullpath=False):
+        projects = []
+        cwd = os.getcwd()
+        for filename in os.listdir(cwd):
+            if yaml_re.search(filename):
+                if fullpath:
+                    projects.append(path.join(cwd, filename))
+                else:
+                    projects.append(self._clean_project_name(filename))
+        return projects
 
     def _ps(self):
         client = docker_client()
-        projectnames = self._get_projectnames_in_dir()
+        projectnames = self._get_projects_in_dir()
         containers = client.containers(all=True)
         unknown = {}
         for container in containers:
