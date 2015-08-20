@@ -8,6 +8,8 @@ import signal
 import sys
 import os
 import subprocess
+import yaml
+
 from os import path
 from requests.exceptions import ReadTimeout
 
@@ -50,6 +52,7 @@ def main():
 
 
 yaml_re = re.compile('\.yaml$|\.yml$')
+envvar_re = re.compile('\$\w+')
 
 class Usage(object):
 
@@ -96,13 +99,16 @@ class Usage(object):
                 options_first=True)
         except DocoptExit:
             raise SystemExit(docstring)
+        
 
         if 'ps' in options and options['ps']:
             self._ps()
             return
+            
+        projectname = self._clean_project_name(options['PROJECT'])
 
         if 'exec' in options and options['exec']:
-          self._exec(options['PROJECT'], options['SERVICE'], options['COMMANDS'])
+          self._exec(projectname, options['SERVICE'], options['COMMANDS'])
           return
 
         # 'command' references a function on this class
@@ -110,12 +116,16 @@ class Usage(object):
         if not hasattr(self, command):
             print('{command} command not found'.format(command=command))
             sys.exit(1)
-
-        projectname = self._clean_project_name(options['PROJECT'])
+        
         servicenames = options['SERVICES']
 
+        if command in ['up','build','recreate']:
+            config = self._get_config(projectname, envvars=True)
+        else:
+            config = self._get_config(projectname)   
+
         client = docker_client()
-        config = self._get_config(projectname)
+        
         project = Project.from_dicts(
             projectname,
             config,
@@ -127,13 +137,44 @@ class Usage(object):
     def _clean_project_name(self, name):       
         return yaml_re.sub('', name)
 
-    def _evaluate_env_vars(self):
-        pass
+    def _evaluate_env_vars(self, openfile):
+        body = openfile.read()
+        matched = []
+        not_found = []
+        for envvar in envvar_re.findall(body):
+            if envvar not in matched:
+                matched.append(envvar)
+                sysenvvar = os.getenv(envvar.replace('$',''))
+                if sysenvvar:
+                    body = body.replace(envvar, sysenvvar)
+                else:
+                    not_found.append(envvar)
+        if not_found:
+            raise ConfigurationError("Environment variables '%s' not setted or empty" % ', '.join(not_found))
+        openfile.seek(0)
+        return body
 
-    def _get_config(self, name):
+    def _load_yaml(self, filename):
+        try:
+            with open(filename, 'r') as openfile:
+                return yaml.safe_load(self._evaluate_env_vars(openfile))
+        except IOError as e:
+            raise ConfigurationError(six.text_type(e))
+
+    def _load(self, filename, envvars):
+        working_dir = os.path.dirname(filename)
+        if envvars:
+            loaded = self._load_yaml(filename)
+        else:
+            loaded = config.load_yaml(filename)
+        return config.from_dictionary(loaded,
+                                      working_dir=working_dir, 
+                                      filename=filename)
+
+    def _get_config(self, name, envvars=False):
         for filename in self._get_projects_in_dir(True):
             if re.search('%s(.yaml|.yml)$' % name, filename): 
-                return config.load(filename)
+                return self._load(filename, envvars)
         raise ConfigurationError("Project filename '%s' not found in the current directory" % name)               
 
     def _get_projects_in_dir(self, fullpath=False):
