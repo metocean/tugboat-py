@@ -52,7 +52,7 @@ def main():
 
 
 yaml_re = re.compile('\.yaml$|\.yml$')
-envvar_re = re.compile('\$\w+')
+envvar_re = re.compile('(?<=\$\{)\w+(?=\})')
 
 class Usage(object):
 
@@ -144,9 +144,9 @@ class Usage(object):
         for envvar in envvar_re.findall(body):
             if envvar not in matched:
                 matched.append(envvar)
-                sysenvvar = os.getenv(envvar.replace('$',''))
+                sysenvvar = os.getenv(envvar)
                 if sysenvvar:
-                    body = body.replace(envvar, sysenvvar)
+                    body = body.replace('${%s}' % envvar, sysenvvar)
                 else:
                     not_found.append(envvar)
         if not_found:
