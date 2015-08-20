@@ -145,12 +145,12 @@ class Usage(object):
             if envvar not in matched:
                 matched.append(envvar)
                 sysenvvar = os.getenv(envvar)
-                if sysenvvar:
+                if not sysenvvar is None:
                     body = body.replace('${%s}' % envvar, sysenvvar)
                 else:
                     not_found.append(envvar)
         if not_found:
-            raise ConfigurationError("Environment variables '%s' not setted or empty" % ', '.join(not_found))
+            raise ConfigurationError("Environment variables '%s' not setted" % ', '.join(not_found))
         openfile.seek(0)
         return body
 
