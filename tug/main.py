@@ -60,9 +60,9 @@ class Usage(object):
     """Describe your infrastructure with yaml files.
 
     Usage:
-        tug2 ps
-        tug2 exec PROJECT SERVICE [COMMANDS ...]
-        tug2 COMMAND PROJECT [SERVICES ...]
+        tug ps
+        tug exec PROJECT SERVICE [COMMANDS ...]
+        tug COMMAND PROJECT [SERVICES ...]
 
     Common Commands:
 
@@ -71,7 +71,7 @@ class Usage(object):
         diff           Describe the changes needed to update
         cull           Stop and delete services
         logs           Display container logs
-        exec           Run a command inside a container (not implemented yet)
+        exec           Run a command inside a container
 
     Management Commands:
 

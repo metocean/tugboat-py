@@ -11,17 +11,17 @@ Tugboat is [docker compose](https://docs.docker.com/compose/) under the hood wit
 Describe your infrastructure with yaml files.
 
   Usage:
-    tug2 ps
-    tug2 COMMAND PROJECT [SERVICES ...]
+    tug ps
+    tug COMMAND PROJECT [SERVICES ...]
 
   Common Commands:
 
     ps             List all running and available groups
     up             Update and run services
-    diff           Describe the changes needed to update (not implemented yet)
+    diff           Describe the changes needed to update
     cull           Stop and delete services
     logs           Display group logs
-    exec           Run a command inside a service (not implemented yet)
+    exec           Run a command inside a service
 
   Management Commands:
 
