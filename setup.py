@@ -21,7 +21,7 @@ def find_version(*file_paths):
     raise RuntimeError("Unable to find version string.")
 
 install_requires = [
-    'docker-compose >= 1.3.0, < 1.4'
+    'docker-compose >= 1.3.0, < 1.5'
 ]
 
 setup(

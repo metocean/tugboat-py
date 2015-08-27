@@ -16,6 +16,7 @@ from requests.exceptions import ReadTimeout
 from docopt import docopt, DocoptExit
 
 from compose import config
+from compose.config import ConfigDetails
 from compose.project import Project
 from compose.cli.log_printer import LogPrinter
 
@@ -99,12 +100,11 @@ class Usage(object):
                 options_first=True)
         except DocoptExit:
             raise SystemExit(docstring)
-        
 
         if 'ps' in options and options['ps']:
             self._ps()
             return
-            
+
         projectname = self._clean_project_name(options['PROJECT'])
 
         if 'exec' in options and options['exec']:
@@ -116,16 +116,16 @@ class Usage(object):
         if not hasattr(self, command):
             print('{command} command not found'.format(command=command))
             sys.exit(1)
-        
+
         servicenames = options['SERVICES']
 
-        if command in ['up','build','recreate']:
+        if command in ['up', 'build', 'recreate']:
             config = self._get_config(projectname, envvars=True)
         else:
-            config = self._get_config(projectname)   
+            config = self._get_config(projectname)
 
         client = docker_client()
-        
+
         project = Project.from_dicts(
             projectname,
             config,
@@ -134,7 +134,7 @@ class Usage(object):
         handle = getattr(self, command)
         handle(project, projectname, servicenames)
 
-    def _clean_project_name(self, name):       
+    def _clean_project_name(self, name):
         return yaml_re.sub('', name)
 
     def _evaluate_env_vars(self, openfile):
@@ -167,15 +167,13 @@ class Usage(object):
             loaded = self._load_yaml(filename)
         else:
             loaded = config.load_yaml(filename)
-        return config.from_dictionary(loaded,
-                                      working_dir=working_dir, 
-                                      filename=filename)
+        return config.load(ConfigDetails(loaded, working_dir=working_dir, filename=filename))
 
     def _get_config(self, name, envvars=False):
         for filename in self._get_projects_in_dir(True):
-            if re.search('%s(.yaml|.yml)$' % name, filename): 
+            if re.search('%s(.yaml|.yml)$' % name, filename):
                 return self._load(filename, envvars)
-        raise ConfigurationError("Project filename '%s' not found in the current directory" % name)               
+        raise ConfigurationError("Project filename '%s' not found in the current directory" % name)
 
     def _get_projects_in_dir(self, fullpath=False):
         projects = []
@@ -320,14 +318,12 @@ class Usage(object):
         for container in containers:
             unknown[container.id] = container
         services = project.get_services(servicenames, include_deps=True)
-        plans = project._get_convergence_plans(services, smart_recreate=True)
+        plans = project._get_convergence_plans(services)
         for service in plans:
             plan = plans[service]
             for container in plan.containers:
                 del unknown[container.id]
-        project.up(
-            service_names=servicenames,
-            smart_recreate=True)
+        project.up(service_names=servicenames)
 
         if len(servicenames) == 0:
             for id in unknown:
