@@ -349,7 +349,7 @@ class Usage(object):
         for container in containers:
             unknown[container.id] = container
         services = project.get_services(servicenames, include_deps=True)
-        plans = project._get_convergence_plans(services, smart_recreate=True)
+        plans = project._get_convergence_plans(services)
 
         print()
         print('  {name} convergence plan:'.format(name=projectname))
