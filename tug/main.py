@@ -93,12 +93,14 @@ class Usage(object):
 
     Usage:
         tug ps
+        tug ls
         tug exec PROJECT SERVICE [COMMANDS ...]
         tug COMMAND PROJECT [SERVICES ...]
 
     Common Commands:
 
-        ps             List all running and available projects
+        ps             List all running projects
+        ls             List all running and available projects
         up             Update and run services
         diff           Describe the changes needed to update
         cull           Stop and delete services
@@ -134,6 +136,10 @@ class Usage(object):
 
         if 'ps' in options and options['ps']:
             self._ps()
+            return
+
+        if 'ls' in options and options['ls']:
+            self._ls()
             return
 
         projectname = self._clean_project_name(options['PROJECT'])
@@ -229,6 +235,52 @@ class Usage(object):
                 humancounts.append('{count} {state}'.format(
                     count=counts[state],
                     state=state))
+            if len(counts) == 1 and 'Uncreated' in counts:
+                continue;
+            print('  {name: <24}{counts}'.format(
+                name=projectname,
+                counts=','.join(humancounts)))
+
+        print()
+
+    def _ls(self):
+        client = docker_client()
+        config_files = self._get_available_projects()
+        containers = client.containers(all=True)
+        unknown = {}
+        for container in containers:
+            unknown[container['Id']] = client.inspect_container(
+                container['Id'])
+        if len(config_files) != 0:
+            print()
+        for config_file in config_files:
+            projectname = self._clean_project_name(path.basename(config_file))
+            config_data = self._get_config(projectname)
+            project = Project.from_config(
+                projectname,
+                config_data,
+                client)
+            services = project.get_services()
+
+            counts = {}
+
+            for service in services:
+                c = service.containers(stopped=True) + service.containers(one_off=True)
+                if len(c) == 0:
+                    if not 'Uncreated' in counts:
+                        counts['Uncreated'] = 0
+                    counts['Uncreated'] += 1
+                for container in c:
+                    del unknown[container.id]
+                    if not container.human_readable_state in counts:
+                        counts[container.human_readable_state] = 0
+                    counts[container.human_readable_state] += 1
+
+            humancounts = []
+            for state in counts:
+                humancounts.append('{count} {state}'.format(
+                    count=counts[state],
+                    state=state))
             print('  {name: <24}{counts}'.format(
                 name=projectname,
                 counts=','.join(humancounts)))
@@ -274,6 +326,9 @@ class Usage(object):
                     state=state,
                     ip=ip))
         print()
+
+    def ls(self, project, projectname, servicenames):
+        self.ps(project, projectname, servicenames)
 
     def build(self, project, projectname, servicenames):
         project.build(service_names=servicenames, no_cache=False)
