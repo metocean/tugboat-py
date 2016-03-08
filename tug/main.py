@@ -289,7 +289,7 @@ class Usage(object):
             service_names=servicenames,
             stopped=True)
         print('Attaching to', ', '.join(c.name for c in containers))
-        LogPrinter(containers, attach_params={'logs': True}).run()
+        LogPrinter(containers).run() #, log_args={'follow': True, 'tail': 100}).run()
 
     def pull(self, project, projectname, servicenames):
         project.pull(service_names=servicenames)
