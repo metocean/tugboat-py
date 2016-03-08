@@ -1,56 +1,87 @@
+from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
-from inspect import getdoc
-from operator import attrgetter
 
-import re
+
 import signal
-import sys
 import os
 import subprocess
 import yaml
-
+import contextlib
+import json
+import logging
+import re
+import sys
 from os import path
-from requests.exceptions import ReadTimeout
-
+from inspect import getdoc
+from operator import attrgetter
 from docopt import docopt, DocoptExit
 
-from compose import config
-from compose.config import ConfigDetails
-from compose.project import Project
-from compose.cli.log_printer import LogPrinter
 
 from docker.errors import APIError
-from compose.project import NoSuchService, ConfigurationError
-from compose.service import BuildError
-from compose.legacy import LegacyContainersError
+from requests.exceptions import ReadTimeout
 
-import docker
-import dockerpty
-
+from compose.cli import signals
+from compose.config import config, ConfigurationError, parse_environment
+from compose.config.serialize import serialize_config
+from compose.const import API_VERSION_TO_ENGINE_VERSION, DEFAULT_TIMEOUT, HTTP_TIMEOUT, IS_WINDOWS_PLATFORM
+from compose.progress_stream import StreamOutputError
+from compose.project import Project
+from compose.project import NoSuchService
+from compose.service import BuildError, ConvergenceStrategy, ImageType, NeedsBuildError
+from compose.cli.command import friendly_error_message, get_config_path_from_options, project_from_options
+from compose.cli.docopt_command import DocoptCommand, NoSuchCommand
+from compose.cli.errors import UserError
+from compose.cli.formatter import ConsoleWarningFormatter, Formatter
+from compose.cli.log_printer import LogPrinter
+from compose.cli.utils import get_version_info, yesno
 from .client import docker_client
 from .__init__ import __version__
 
 
-def main():
+if not IS_WINDOWS_PLATFORM:
+    from dockerpty.pty import PseudoTerminal, RunOperation
 
+def main():
     try:
         Usage()
-    except KeyboardInterrupt:
-        print("\nAborting.")
+    except (KeyboardInterrupt, signals.ShutdownException):
+        print("Aborting.")
         sys.exit(1)
-    except (NoSuchService, ConfigurationError, LegacyContainersError) as e:
+    except (UserError, NoSuchService, ConfigurationError) as e:
         print(e.msg)
         sys.exit(1)
+    except NoSuchCommand as e:
+        commands = "\n".join(parse_doc_section("commands:", getdoc(e.supercommand)))
+        print("No such command: %s\n\n%s", e.command, commands)
+        sys.exit(1)
     except APIError as e:
-        print(e.explanation)
+        log_api_error(e)
         sys.exit(1)
     except BuildError as e:
-        print("Service '{service}' failed to build: {reason}".format(
-            service=e.service.name,
-            reason=e.reason))
+        print("Service '%s' failed to build: %s" % (e.service.name, e.reason))
+        sys.exit(1)
+    except StreamOutputError as e:
+        print(e)
+        sys.exit(1)
+    except ReadTimeout as e:
+        print("An HTTP request took too long to complete.")
         sys.exit(1)
 
+def log_api_error(e):
+    if 'client is newer than server' in e.explanation:
+        # we need JSON formatted errors. In the meantime...
+        # TODO: fix this by refactoring project dispatch
+        # http://github.com/docker/compose/pull/2832#commitcomment-15923800
+        client_version = e.explanation.split('client API version: ')[1].split(',')[0]
+        print(
+            "The engine version is lesser than the minimum required by "
+            "compose. Your current project requires a Docker Engine of "
+            "version {version} or superior.".format(
+                version=API_VERSION_TO_ENGINE_VERSION[client_version]
+            ))
+    else:
+        print(e.explanation)
 
 yaml_re = re.compile('\.yaml$|\.yml$')
 envvar_re = re.compile('(?<=\$\{)\w+(?=\})')
@@ -119,16 +150,13 @@ class Usage(object):
 
         servicenames = options['SERVICES']
 
-        if command in ['up', 'build', 'recreate']:
-            config = self._get_config(projectname, envvars=True)
-        else:
-            config = self._get_config(projectname)
+        config_data = self._get_config(projectname)
 
         client = docker_client()
 
-        project = Project.from_dicts(
+        project = Project.from_config(
             projectname,
-            config,
+            config_data,
             client)
 
         handle = getattr(self, command)
@@ -137,23 +165,6 @@ class Usage(object):
     def _clean_project_name(self, name):
         return yaml_re.sub('', name)
 
-    def _evaluate_env_vars(self, openfile):
-        body = openfile.read()
-        matched = []
-        not_found = []
-        for envvar in envvar_re.findall(body):
-            if envvar not in matched:
-                matched.append(envvar)
-                sysenvvar = os.getenv(envvar)
-                if not sysenvvar is None:
-                    body = body.replace('${%s}' % envvar, sysenvvar)
-                else:
-                    not_found.append(envvar)
-        if not_found:
-            raise ConfigurationError("Environment variables '%s' not setted" % ', '.join(not_found))
-        openfile.seek(0)
-        return body
-
     def _load_yaml(self, filename):
         try:
             with open(filename, 'r') as openfile:
@@ -161,18 +172,15 @@ class Usage(object):
         except IOError as e:
             raise ConfigurationError(six.text_type(e))
 
-    def _load(self, filename, envvars):
-        working_dir = os.path.dirname(filename)
-        if envvars:
-            loaded = self._load_yaml(filename)
-        else:
-            loaded = config.load_yaml(filename)
-        return config.load(ConfigDetails(loaded, working_dir=working_dir, filename=filename))
+    def _load(self, filename):
+        working_dir = path.dirname(filename)
+        loaded = config.load_yaml(filename)
+        return config.load(config.find(working_dir, [path.basename(filename)]))
 
-    def _get_config(self, name, envvars=False):
+    def _get_config(self, name):
         for filename in self._get_projects_in_dir(True):
             if re.search('%s(.yaml|.yml)$' % name, filename):
-                return self._load(filename, envvars)
+                return self._load(filename)
         raise ConfigurationError("Project filename '%s' not found in the current directory" % name)
 
     def _get_projects_in_dir(self, fullpath=False):
@@ -197,10 +205,10 @@ class Usage(object):
         if len(projectnames) != 0:
             print()
         for projectname in projectnames:
-            config = self._get_config(projectname)
-            project = Project.from_dicts(
+            config_data = self._get_config(projectname)
+            project = Project.from_config(
                 projectname,
-                config,
+                config_data,
                 client)
             services = project.get_services()
 
@@ -291,26 +299,33 @@ class Usage(object):
 
     def rm(self, project, projectname, servicenames):
         project.remove_stopped(service_names=servicenames)
-
         self.ps(project, projectname, servicenames)
 
     def down(self, project, projectname, servicenames):
         project.kill(service_names=servicenames, signal='SIGTERM')
-        project.stop(service_names=servicenames)
-
+        try:
+            project.stop(service_names=servicenames)
+        except:
+            pass
         self.ps(project, projectname, servicenames)
 
     def cull(self, project, projectname, servicenames):
         project.kill(service_names=servicenames, signal='SIGTERM')
-        project.stop(service_names=servicenames)
+        try:
+            project.stop(service_names=servicenames)
+        except:
+            pass
         project.remove_stopped(service_names=servicenames)
-
         self.ps(project, projectname, servicenames)
 
     def recreate(self, project, projectname, servicenames):
-        project.restart(service_names=servicenames)
-
-        self.ps(project, projectname, servicenames)
+        project.kill(service_names=servicenames, signal='SIGTERM')
+        try:
+            project.stop(service_names=servicenames)
+        except:
+            pass
+        project.remove_stopped(service_names=servicenames)
+        self.up(project, projectname, servicenames)
 
     def up(self, project, projectname, servicenames):
         containers = project.containers(stopped=True) + project.containers(one_off=True)
@@ -318,7 +333,7 @@ class Usage(object):
         for container in containers:
             unknown[container.id] = container
         services = project.get_services(servicenames, include_deps=True)
-        plans = project._get_convergence_plans(services)
+        plans = project._get_convergence_plans(services, ConvergenceStrategy.changed)
         for service in plans:
             plan = plans[service]
             for container in plan.containers:
@@ -349,7 +364,7 @@ class Usage(object):
         for container in containers:
             unknown[container.id] = container
         services = project.get_services(servicenames, include_deps=True)
-        plans = project._get_convergence_plans(services)
+        plans = project._get_convergence_plans(services, ConvergenceStrategy.changed)
 
         print()
         print('  {name} convergence plan:'.format(name=projectname))
