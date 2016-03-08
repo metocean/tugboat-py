@@ -17,6 +17,7 @@ from inspect import getdoc
 from operator import attrgetter
 from docopt import docopt, DocoptExit
 
+logging.basicConfig()
 
 from docker.errors import APIError
 from requests.exceptions import ReadTimeout
