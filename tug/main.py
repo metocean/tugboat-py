@@ -84,7 +84,6 @@ def log_api_error(e):
         print(e.explanation)
 
 yaml_re = re.compile('\.yaml$|\.yml$')
-envvar_re = re.compile('(?<=\$\{)\w+(?=\})')
 
 class Usage(object):
 
@@ -165,46 +164,44 @@ class Usage(object):
     def _clean_project_name(self, name):
         return yaml_re.sub('', name)
 
-    def _load_yaml(self, filename):
-        try:
-            with open(filename, 'r') as openfile:
-                return yaml.safe_load(self._evaluate_env_vars(openfile))
-        except IOError as e:
-            raise ConfigurationError(six.text_type(e))
-
     def _load(self, filename):
         working_dir = path.dirname(filename)
         loaded = config.load_yaml(filename)
         return config.load(config.find(working_dir, [path.basename(filename)]))
 
     def _get_config(self, name):
-        for filename in self._get_projects_in_dir(True):
-            if re.search('%s(.yaml|.yml)$' % name, filename):
-                return self._load(filename)
+        config_files = self._get_projects_in_dir()
+        for config_file in config_files:
+            projectname = self._clean_project_name(path.basename(config_file))
+            if name == projectname:
+                return self._load(config_file)
         raise ConfigurationError("Project filename '%s' not found in the current directory" % name)
 
-    def _get_projects_in_dir(self, fullpath=False):
+    def _get_projects_in_dir(self):
         projects = []
-        cwd = os.getcwd()
-        for filename in os.listdir(cwd):
-            if yaml_re.search(filename):
-                if fullpath:
-                    projects.append(path.join(cwd, filename))
-                else:
-                    projects.append(self._clean_project_name(filename))
+        search_directories = []
+        if os.environ.get('TUGBOAT_PATH') is not None:
+            for directory in os.environ.get('TUGBOAT_PATH').split(':'):
+                search_directories.append(directory)
+        search_directories.append(os.getcwd())
+        for directory in search_directories:
+            for filename in os.listdir(directory):
+                if yaml_re.search(filename):
+                    projects.append(path.join(directory, filename))
         return projects
 
     def _ps(self):
         client = docker_client()
-        projectnames = self._get_projects_in_dir()
+        config_files = self._get_projects_in_dir()
         containers = client.containers(all=True)
         unknown = {}
         for container in containers:
             unknown[container['Id']] = client.inspect_container(
                 container['Id'])
-        if len(projectnames) != 0:
+        if len(config_files) != 0:
             print()
-        for projectname in projectnames:
+        for config_file in config_files:
+            projectname = self._clean_project_name(path.basename(config_file))
             config_data = self._get_config(projectname)
             project = Project.from_config(
                 projectname,
