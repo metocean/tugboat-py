@@ -170,20 +170,20 @@ class Usage(object):
         return config.load(config.find(working_dir, [path.basename(filename)]))
 
     def _get_config(self, name):
-        config_files = self._get_projects_in_dir()
+        config_files = self._get_available_projects()
         for config_file in config_files:
             projectname = self._clean_project_name(path.basename(config_file))
             if name == projectname:
                 return self._load(config_file)
         raise ConfigurationError("Project filename '%s' not found in the current directory" % name)
 
-    def _get_projects_in_dir(self):
+    def _get_available_projects(self):
         projects = []
         search_directories = []
+        search_directories.append(os.getcwd())
         if os.environ.get('TUGBOAT_PATH') is not None:
             for directory in os.environ.get('TUGBOAT_PATH').split(':'):
                 search_directories.append(directory)
-        search_directories.append(os.getcwd())
         for directory in search_directories:
             for filename in os.listdir(directory):
                 if yaml_re.search(filename):
@@ -192,7 +192,7 @@ class Usage(object):
 
     def _ps(self):
         client = docker_client()
-        config_files = self._get_projects_in_dir()
+        config_files = self._get_available_projects()
         containers = client.containers(all=True)
         unknown = {}
         for container in containers:
