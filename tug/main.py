@@ -206,10 +206,13 @@ class Usage(object):
             unknown[container['Id']] = client.inspect_container(
                 container['Id'])
         if len(config_files) != 0:
-            print()
+            print('')
         for config_file in config_files:
             projectname = self._clean_project_name(path.basename(config_file))
-            config_data = self._get_config(projectname)
+            try:
+                config_data = self._get_config(projectname)
+            except (ConfigurationError) as e:
+                continue
             project = Project.from_config(
                 projectname,
                 config_data,
@@ -248,6 +251,7 @@ class Usage(object):
         config_files = self._get_available_projects()
         containers = client.containers(all=True)
         unknown = {}
+        ignoredyaml = 0
         for container in containers:
             unknown[container['Id']] = client.inspect_container(
                 container['Id'])
@@ -255,7 +259,12 @@ class Usage(object):
             print()
         for config_file in config_files:
             projectname = self._clean_project_name(path.basename(config_file))
-            config_data = self._get_config(projectname)
+            try:
+                config_data = self._get_config(projectname)
+            except (ConfigurationError) as e:
+                print('  {name: <24}Configuration error'.format(name=projectname))
+                ignoredyaml += 1
+                continue
             project = Project.from_config(
                 projectname,
                 config_data,
@@ -302,6 +311,15 @@ class Usage(object):
                 state='',
                 ip=ip))
         print()
+
+        if ignoredyaml > 0:
+            plural = 's'
+            if ignoredyaml is 1:
+                plural = ''
+            print('  {count} file{plural} failed to parse'.format(
+                count=ignoredyaml,
+                plural=plural))
+            print()
 
     def ps(self, project, projectname, servicenames):
         print()
