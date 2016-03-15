@@ -42,3 +42,67 @@ Options:
 ```
 
 The yml format is identical to the [docker compose yml format](https://docs.docker.com/compose/yml/).
+
+## Example
+
+```
+> cd examples
+> pwd
+/Users/tcoats/Open/tugboat-py/examples
+> export TUGBOAT_PATH=/Users/tcoats/Open/tugboat-py/examples:./
+> tug ps
+
+  couchdb                 1 Up
+
+> tug down couchdb
+Killing couchdb_d_1 ... done
+Stopping couchdb_d_1 ... done
+
+  couchdb services:
+
+  d_1                     Exit 137    (host)
+
+> tug ps
+
+  couchdb                 1 Exit 137
+
+> tug ls
+
+  couchdb                 1 Exit 137
+  redis                   1 Uncreated
+
+> tug up redis
+
+  redis services:
+
+  d_1                     Up          172.17.0.2
+
+> cat redis.yml
+d:
+  image: redis
+  ports:
+  - "6379:6379"
+> cat redis.yml
+d:
+  image: redis
+  ports:
+  - "6379:6379"
+  - "80:80"
+> tug diff redis
+
+  redis convergence plan:
+
+  d                       recreate    redis_d_1
+
+> tug up redis
+
+  redis services:
+
+  d_1                     Up          172.17.0.2
+
+> tug diff redis
+
+  redis convergence plan:
+
+  d                       noop        redis_d_1
+```
