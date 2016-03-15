@@ -185,12 +185,13 @@ class Usage(object):
         raise ConfigurationError("Project filename '%s' not found in the current directory" % name)
 
     def _get_available_projects(self):
+        search_directories = set()
+        tugboat_path = os.environ.get('TUGBOAT_PATH') or './'
+        for directory in tugboat_path.split(':'):
+            search_directories.add(os.path.abspath(directory))
+        print(search_directories)
+
         projects = []
-        search_directories = []
-        search_directories.append(os.getcwd())
-        if os.environ.get('TUGBOAT_PATH') is not None:
-            for directory in os.environ.get('TUGBOAT_PATH').split(':'):
-                search_directories.append(directory)
         for directory in search_directories:
             for filename in os.listdir(directory):
                 if yaml_re.search(filename):
