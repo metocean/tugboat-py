@@ -4,6 +4,8 @@ Tugboat is [docker compose](https://docs.docker.com/compose/) under the hood wit
 ## Installation
 `pip install tug`
 
+Set a `TUGBOAT_PATH` environment variable to all your directories of `.yaml` files and the `tug` command will work from anywhere.
+
 ## Usage
 
 ```
@@ -42,3 +44,4 @@ Options:
 ```
 
 The yml format is identical to the [docker compose yml format](https://docs.docker.com/compose/yml/).
+
