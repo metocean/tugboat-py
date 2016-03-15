@@ -189,7 +189,6 @@ class Usage(object):
         tugboat_path = os.environ.get('TUGBOAT_PATH') or './'
         for directory in tugboat_path.split(':'):
             search_directories.add(os.path.abspath(directory))
-        print(search_directories)
 
         projects = []
         for directory in search_directories:
