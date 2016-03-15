@@ -107,5 +107,11 @@ d:
   redis convergence plan:
 
   d                       noop        redis_d_1
+
+> tug logs couchdb
+d_1 | Apache CouchDB 1.6.1 (LogLevel=info) is starting.
+d_1 | Apache CouchDB has started. Time to relax.
+d_1 | [info] [<0.32.0>] Apache CouchDB has started on http://0.0.0.0:5984/
+...streaming
 ```
 
