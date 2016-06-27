@@ -21,7 +21,7 @@ def find_version(*file_paths):
     raise RuntimeError("Unable to find version string.")
 
 install_requires = [
-    'docker-compose >= 1.6.0, < 1.7'
+    'docker-compose >= 1.6.0, < 1.8'
 ]
 
 setup(
@@ -30,7 +30,7 @@ setup(
     description='Describe your infrastructure with yaml files',
     url='https://github.com/metocean/tugboat-py',
     author='MetOcean Solutions Ltd.',
-    author_email='t.coats@metocean.co.nz',
+    author_email='support@metocean.co.nz',
     license='Apache License 2.0',
     packages=find_packages(exclude=['tests.*', 'tests']),
     include_package_data=True,
