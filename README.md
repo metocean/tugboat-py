@@ -2,9 +2,9 @@
 Tugboat is [docker compose](https://docs.docker.com/compose/) under the hood with a new command line interface including native support for multiple .yml files and a friendlier syntax.
 
 ## Installation
-`pip install tug`
+`pip install thug`
 
-Set a `TUGBOAT_PATH` environment variable to all your directories of `.yaml` files and the `tug` command will work from anywhere.
+Set a `TUGBOAT_PATH` environment variable to all your directories of `.yaml` files and the `thug` command will work from anywhere.
 
 ## Usage
 
@@ -12,10 +12,10 @@ Set a `TUGBOAT_PATH` environment variable to all your directories of `.yaml` fil
 Describe your infrastructure with yaml files.
 
 Usage:
-    tug ps
-    tug ls
-    tug exec PROJECT SERVICE [COMMANDS ...]
-    tug COMMAND PROJECT [SERVICES ...]
+    thug ps
+    thug ls
+    thug exec PROJECT SERVICE [COMMANDS ...]
+    thug COMMAND PROJECT [SERVICES ...]
 
 Common Commands:
 
@@ -52,11 +52,11 @@ The yml format is identical to the [docker compose yml format](https://docs.dock
 > pwd
 /Users/tcoats/Open/tugboat-py/examples
 > export TUGBOAT_PATH=/Users/tcoats/Open/tugboat-py/examples:./
-> tug ps
+> thug ps
 
   couchdb                 1 Up
 
-> tug down couchdb
+> thug down couchdb
 Killing couchdb_d_1 ... done
 Stopping couchdb_d_1 ... done
 
@@ -64,16 +64,16 @@ Stopping couchdb_d_1 ... done
 
   d_1                     Exit 137    (host)
 
-> tug ps
+> thug ps
 
   couchdb                 1 Exit 137
 
-> tug ls
+> thug ls
 
   couchdb                 1 Exit 137
   redis                   1 Uncreated
 
-> tug up redis
+> thug up redis
 
   redis services:
 
@@ -90,28 +90,27 @@ d:
   ports:
   - "6379:6379"
   - "80:80"
-> tug diff redis
+> thug diff redis
 
   redis convergence plan:
 
   d                       recreate    redis_d_1
 
-> tug up redis
+> thug up redis
 
   redis services:
 
   d_1                     Up          172.17.0.2
 
-> tug diff redis
+> thug diff redis
 
   redis convergence plan:
 
   d                       noop        redis_d_1
 
-> tug logs couchdb
+> thug logs couchdb
 d_1 | Apache CouchDB 1.6.1 (LogLevel=info) is starting.
 d_1 | Apache CouchDB has started. Time to relax.
 d_1 | [info] [<0.32.0>] Apache CouchDB has started on http://0.0.0.0:5984/
 ...streaming
 ```
-

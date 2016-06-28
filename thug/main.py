@@ -92,10 +92,10 @@ class Usage(object):
     """Describe your infrastructure with yaml files.
 
     Usage:
-        tug ps
-        tug ls
-        tug exec PROJECT SERVICE [COMMANDS ...]
-        tug COMMAND PROJECT [SERVICES ...]
+        thug ps
+        thug ls
+        thug exec PROJECT SERVICE [COMMANDS ...]
+        thug COMMAND PROJECT [SERVICES ...]
 
     Common Commands:
 
