@@ -31,7 +31,7 @@ from compose.project import Project
 from compose.project import NoSuchService
 from compose.service import BuildError, ConvergenceStrategy, ImageType, NeedsBuildError
 from compose.cli.command import get_config_path_from_options, project_from_options
-from compose.cli.docopt_command import DocoptCommand, NoSuchCommand
+from compose.cli.docopt_command import NoSuchCommand
 from compose.cli.errors import UserError
 from compose.cli.formatter import ConsoleWarningFormatter, Formatter
 from compose.cli.log_printer import LogPrinter
