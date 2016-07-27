@@ -25,8 +25,8 @@ install_requires = [
 ]
 
 setup(
-    name='thug',
-    version=find_version("thug", "__init__.py"),
+    name='tug',
+    version=find_version("tug", "__init__.py"),
     description='Describe your infrastructure with yaml files',
     url='https://github.com/metocean/tugboat-py',
     author='MetOcean Solutions Ltd.',
@@ -37,7 +37,7 @@ setup(
     install_requires=install_requires,
     entry_points={
         'console_scripts': [
-            'thug=thug.main:main',
+            'tug=tug.main:main',
         ],
     },
 )

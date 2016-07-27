@@ -30,8 +30,8 @@ from compose.progress_stream import StreamOutputError
 from compose.project import Project
 from compose.project import NoSuchService
 from compose.service import BuildError, ConvergenceStrategy, ImageType, NeedsBuildError
-from compose.cli.command import get_config_path_from_options, project_from_options
-from compose.cli.docopt_command import NoSuchCommand
+from compose.cli.command import friendly_error_message, get_config_path_from_options, project_from_options
+from compose.cli.docopt_command import DocoptCommand, NoSuchCommand
 from compose.cli.errors import UserError
 from compose.cli.formatter import ConsoleWarningFormatter, Formatter
 from compose.cli.log_printer import LogPrinter
@@ -92,10 +92,10 @@ class Usage(object):
     """Describe your infrastructure with yaml files.
 
     Usage:
-        thug ps
-        thug ls
-        thug exec PROJECT SERVICE [COMMANDS ...]
-        thug COMMAND PROJECT [SERVICES ...]
+        tug ps
+        tug ls
+        tug exec PROJECT SERVICE [COMMANDS ...]
+        tug COMMAND PROJECT [SERVICES ...]
 
     Common Commands:
 
